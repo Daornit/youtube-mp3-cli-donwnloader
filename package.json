@@ -9,6 +9,7 @@
   "author": "Daornit2",
   "license": "ISC",
   "dependencies": {
+    "url-parse": "^1.4.7",
     "yargs": "^15.3.0",
     "youtube-dl": "^3.0.2",
     "ytpl": "^0.1.20"

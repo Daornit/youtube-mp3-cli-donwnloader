@@ -1,15 +1,25 @@
 const fs = require('fs');
 const ytpl = require('ytpl');
+const parse = require('url-parse');
+const {getPlaylistId} = require('ytpl/lib/util');
 const youtubedl = require('youtube-dl');
 const argv = require('yargs').argv;
 
+async function donwloadAsync(url, download_path = __dirname + '/mp3down/') {
+    return new Promise((resolve, reject) => {
+        youtubedl.exec(url, ['-x', '--audio-format', 'mp3', '-o', download_path + '%(title)s.%(ext)s'], {}, function(err, output) {
+            if (err) {
+                console.warn(err);
+            }
+            resolve(output? output.join('\n') : err);
+        });
+    });
+}
 
 async function donwloadMp3(items, path) {
-    console.log(path);
 
     for await (let item of items){
         let check = await fs.existsSync(path + item.title + '.mp3');
-        console.log("check:: ", check);
         if(!check) {
             let success = await donwloadAsync(item.url_simple, path)
             success ? console.log(item.title + " successfully downloaded!"): console.log(item.title + " failed to download!")
@@ -21,21 +31,9 @@ async function donwloadMp3(items, path) {
     console.log("All the playlist donwloaded");
 }
 
-async function donwloadAsync(url, download_path = '/home/daornit2/projects/youtube-downloader/mp3down/') {
-    return new Promise((resolve, reject) => {
-        youtubedl.exec(url, ['-x', '--audio-format', 'mp3', '-o', download_path + '%(title)s.%(ext)s'], {}, function(err, output) {
-            if (err) {
-                console.warn(err);
-            }
-            resolve(output? output.join('\n') : err);
-        });
-    });
-}
-
-async function playlistDownload(ID, BASE_URL = '/home/daornit2/projects/youtube-downloader/mp3down/') {
+async function playlistDownload(ID, BASE_URL = __dirname + '/mp3down/') {
 
     let playlist = await ytpl(ID);
-    console.log("playlist:: ", playlist)
 
     let PLAYLIST_DOWNLOAD_PATH = BASE_URL + playlist.title + '/';
     fs.exists(PLAYLIST_DOWNLOAD_PATH, (result) => {
@@ -54,13 +52,21 @@ async function playlistDownload(ID, BASE_URL = '/home/daornit2/projects/youtube-
     })
 }
 
+function downloadSingleVideo(id, output){
+    console.log("Downloading ...")
+    donwloadAsync('https://www.youtube.com/watch?v=' + id, output)
+    .then((result, err) => {
+        if(result) console.log("Successfully downloaded");
+        else console.log("Failed to download")
+    });
+}
 if(argv['h']){
     console.log('Usage: node index --playlist=ID --output="pat-to-download"')
-    console.log('--playlist-id or --id one of them must be provided');
+    console.log('--playlist-id, --id or --url one of them must be provided');
     process.exit();
 }
 
-if(!(argv['id'] || argv['playlist-id'])){
+if(!(argv['id'] || argv['playlist-id'] || argv['url'])){
     console.log('Can`t run this program because lack of argument.')
     console.log('You can type -h.')
     process.exit();
@@ -68,16 +74,27 @@ if(!(argv['id'] || argv['playlist-id'])){
 
 if(argv.output && argv.output[argv.output.length-1] != '/'){
     argv.output = argv.output + '/';
-    console.log(argv.output);
 }
 
 if(argv['playlist-id']){
-    playlistDownload(argv['playlist-id'], argv['output'])
+    
+    if(ytpl.PLAYLIST_REGEX.test(argv['playlist-id'])) playlistDownload(argv['playlist-id'], argv['output'])
+    else console.log("--playlist-id argument is invalid!");
+
+} else if(argv['url']){
+    let url = parse(argv['url'], true);
+    if(url.hostname === 'www.youtube.com'){
+        getPlaylistId(argv['url'])
+            .then(playlistId => playlistDownload(playlistId, argv['output']))
+            .catch(err => {
+                if(!url.query.v){
+                    console.log("Your inputed URL is invalid!")
+                }else{
+                    downloadSingleVideo(url.query.v, argv['output'])
+                }
+            })
+    }
 } else {
-    console.log("Downloading ...")
-    donwloadAsync('https://www.youtube.com/watch?v=' + argv['id'], argv['output'])
-    .then((result, err) => {
-        if(result) console.log("Successfully downloaded");
-        else console.log("Failed to download")
-    });
+    downloadSingleVideo(argv['id'], argv['output'])
 }
+
