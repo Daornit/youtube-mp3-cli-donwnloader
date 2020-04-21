@@ -5,6 +5,8 @@ const {getPlaylistId} = require('ytpl/lib/util');
 const youtubedl = require('youtube-dl');
 const argv = require('yargs').argv;
 
+const PLAYLIST_REGEX = /^(PL|UU|LL|RD)[a-zA-Z0-9-_]{16,41}$/;
+
 async function donwloadAsync(url, download_path = __dirname + '/mp3down/') {
     return new Promise((resolve, reject) => {
         youtubedl.exec(url, ['-x', '--audio-format', 'mp3', '-o', download_path + '%(title)s.%(ext)s'], {}, function(err, output) {
@@ -78,7 +80,7 @@ if(argv.output && argv.output[argv.output.length-1] != '/'){
 
 if(argv['playlist-id']){
     
-    if(ytpl.PLAYLIST_REGEX.test(argv['playlist-id'])) playlistDownload(argv['playlist-id'], argv['output'])
+    if(PLAYLIST_REGEX.test(argv['playlist-id'])) playlistDownload(argv['playlist-id'], argv['output'])
     else console.log("--playlist-id argument is invalid!");
 
 } else if(argv['url']){
