@@ -34,9 +34,10 @@ async function donwloadMp3(items, path) {
 }
 
 async function playlistDownload(ID, BASE_URL = __dirname + '/mp3down/') {
+    console.log("playlist:: ", ID)
 
     let playlist = await ytpl(ID);
-
+    console.log("playlist:: ", playlist)
     let PLAYLIST_DOWNLOAD_PATH = BASE_URL + playlist.title + '/';
     fs.exists(PLAYLIST_DOWNLOAD_PATH, (result) => {
         if(result) { 
